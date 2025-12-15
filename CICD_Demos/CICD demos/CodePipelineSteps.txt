@@ -1,0 +1,137 @@
+*****************Demo A: Code Pipeline with Github and Code Deploy stages 
+
+Pre requisite: make sure you have a Github repository ready
+
+Step 1: 
+Create a bucket in s3 with name ex. common-artifacts-aws-cicd-codepipeline-raj
+Go to Code pipeline service and Create pipeline 
+Choose category as Build Custom Pipeline
+Enter pipeline name as RajCodePipelineProject
+Adv Settings- 
+Under Artifact store you will find two options - default vs custom location
+To centralise choose custom location
+Choose s3 bucket name as custom-aws-cicd-codepipeline-raj and click on Next
+Edit the pipeline and edit the source stage
+
+Step2:
+Add source as GitHub 
+Add action - GitHub(via GitHub App)
+Click on Connect to GitHub
+New window opens and add some connection name ex. GitHubRaj and Click on Connect to GitHub button 
+It will ask GitHub Account credentials
+Click on install a new app 
+It will redirect you to GitHub window --click on Approve and install there
+Write output artifact as SourceArtifact and save and Click on Next
+
+Step 3:
+Skip the Build stage
+Skip the Test stage
+
+Step 4:
+Under Deploy stage select deploy provider- codedeploy
+Select appropriate application name ex.RajCodeDeploy
+Select appropriate deployment group ex.DevInstance
+Click on Next --> Review and Create Pipeline
+Create Pipeline
+
+Step 5: check code deploy deployment history
+check EC2 website
+
+Step 6:
+Go to local working directory and change some content in index.html and repeat the process to commit and push the changes in remote repo
+You will see code pipeline automatically gets triggered with the new push and deploys the changes on ec2
+check code deploy deployment history
+check ec2 website
+
+
+
+***************Demo B: Code Pipeline with Github & Code Build & Code Deploy
+
+Pre requisite: make sure to have code build project ready
+
+Step 7: 
+Go to code pipeline you have created and edit the piepeline
+add stages-Test between Source and Deploy stages 
+add action group
+Action Name- TestAction
+action provider- CodeBuild
+Input artifacts- SourceArtifact
+Project name-choose the given name
+Output artifact- testartifact
+Save the pipeline
+Click on Release changes
+Observe the pipeline status
+Check build history in code build
+Check deployment history in code deploy
+Observe ec2 website
+
+We can add many actions
+Parallel and Sequential
+
+You may encounter the following error
+
+Error: 
+1. Permissions of codebuild- Check codebuild role-add s3 full access permissions
+2. Permissions of Code Pipeline- Check Codepipeline role- add Codebuildadminacess permissions
+
+Now retry build stage in codepipeline
+
+Do some new commits 
+
+Full fledge automation- Check EC2
+
+*************Demo C: add Manual Approval stage in pipeline
+
+Step 8:
+
+Edit the pipeline you have create
+Add stage DeploytoProd and action group - manual approval- SNS topic & URL & Comments before Deploy stage in pipeline
+Save the pipeline
+
+Click on Release change
+
+Review manual approval and approve
+
+Check result on EC2
+
+In case you get error in Approval stage, go to CodePipeline role and add snsfullacccess policy
+
+************ Demo E: Create beanstalk environment
+Go to Elastic Beanstalk Service and Click on Create environment and provide some name ex. RajBeanstalkApplication
+Type some domain name ex.rajbeanstalk and click on check availability
+Under platform select PHP
+Under Application Code select Upload your code
+Under Version Label provide some version label name ex. FirstVersion
+Upload your project Zip file from s3 / local
+Under Present keep single instance option and click on Next
+Under service access select create and use new service role
+select ec2keypair
+Under Ec2 instance profile -->select ec2 role
+
+(make sure to create an ec2 role has following permissions:
+AdministratorAccess-AWSElasticBeanstalk
+AmazonS3FullAccess
+AWSElasticBeanstalkMulticontainerDocker
+AWSElasticBeanstalkService
+AWSElasticBeanstalkWebTier
+AWSElasticBeanstalkWorkerTier
+)
+
+Now click on skiptoreview button and submit. This will creak beanstalk environment
+After the environment is fully created, you can check beanstalk URl
+
+************ Demo F: Add new stage of beanstalk environment in existing pipeline
+Go to CodePipeline and Edit the pipeline 
+Add new stage after deploy
+Name it as Beanstalk stage
+Click on AddActionGroup
+Add action as Prod environment
+add Action provider as Elastic Beanstalk
+Select Input Artifacts as Source Artifact
+Choose Application name
+Choose Environment name and Click on done
+save the pipeline
+Now do some change in git repo and push the changes to GitHub repo
+This will trigger pipeline and check Benastalk url for final changes
+
+if you get error related to permission ElasticBeanstalk:CreateVersion then add AWSElasticBeanstalkManagedUpdatesCustomerRolePolicy policy to CodePipeline role 
