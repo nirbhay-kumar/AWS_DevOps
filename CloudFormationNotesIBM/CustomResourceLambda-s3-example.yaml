@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Demo of Lambda-backed Custom Resource creating an S3 bucket
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: custom-resource-demo-12345
+    Description: Name of the bucket to create via custom resource
+
+Resources:
+
+  # IAM Role for Lambda
+  CustomLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "CustomResourceLambdaRole-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  # Lambda Function for Custom Resource
+  MyCustomLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "CustomResourceLambda-${AWS::StackName}"
+      Handler: index.lambda_handler
+      Runtime: python3.12
+      Role: !GetAtt CustomLambdaRole.Arn
+      Timeout: 60
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import urllib3
+
+          http = urllib3.PoolManager()
+
+          def send_response(event, context, status, data):
+              response_body = json.dumps({
+                  "Status": status,
+                  "Reason": "See CloudWatch Logs for details",
+                  "PhysicalResourceId": context.log_stream_name,
+                  "StackId": event["StackId"],
+                  "RequestId": event["RequestId"],
+                  "LogicalResourceId": event["LogicalResourceId"],
+                  "Data": data
+              })
+
+              headers = {
+                  "content-type": "",
+                  "content-length": str(len(response_body))
+              }
+
+              http.request(
+                  "PUT",
+                  event["ResponseURL"],
+                  body=response_body,
+                  headers=headers
+              )
+
+          def lambda_handler(event, context):
+              try:
+                  print("Event Received:", json.dumps(event))
+
+                  bucket_name = event["ResourceProperties"]["BucketName"]
+                  s3 = boto3.client("s3")
+
+                  if event["RequestType"] == "Create":
+                      s3.create_bucket(Bucket=bucket_name)
+                      send_response(event, context, "SUCCESS", {"Message": "Bucket created"})
+                  elif event["RequestType"] == "Update":
+                      send_response(event, context, "SUCCESS", {"Message": "Update OK"})
+                  elif event["RequestType"] == "Delete":
+                      s3.delete_bucket(Bucket=bucket_name)
+                      send_response(event, context, "SUCCESS", {"Message": "Bucket deleted"})
+              except Exception as e:
+                  print("Error:", str(e))
+                  send_response(event, context, "FAILED", {"Error": str(e)})
+
+  # The Custom Resource
+  MyCustomResource:
+    Type: Custom::CreateS3Bucket
+    Properties:
+      ServiceToken: !GetAtt MyCustomLambda.Arn
+      BucketName: !Ref BucketName
+
+Outputs:
+  BucketName:
+    Description: Name of the bucket created by Custom Resource
+    Value: !Ref BucketName

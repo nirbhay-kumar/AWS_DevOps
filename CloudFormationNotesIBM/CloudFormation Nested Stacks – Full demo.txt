@@ -1,0 +1,239 @@
+CloudFormation Nested Stacks – Full Console Lab
+
+This lab will deploy:
+
+Parent Stack
+VPC Nested Stack
+Compute Nested Stack
+
+You will clearly see how:
+Nested stacks appear in console
+Outputs flow from child → parent → child
+Updates & deletes work
+
+📁 LAB STRUCTURE
+
+You will create three files:
+
+main.yaml          (Parent template)
+vpc.yaml           (Child template 1)
+compute.yaml       (Child template 2)
+
+🥇 PART 1 — Upload Child Templates to S3
+Step 1: Go to S3 console → create a bucket
+
+Example bucket name:
+
+cf-nested-demo-<yourname>
+
+
+Enable:
+✔️ Block Public Access (default)
+❌ No need for versioning
+✔️ Keep everything default
+
+Step 2: Upload these two files to S3
+vpc.yaml
+compute.yaml
+
+
+Inside a folder (optional):
+
+templates/vpc.yaml
+templates/compute.yaml
+
+🥈 PART 2 — Use Regional S3 URLs
+
+Copy the Object URLs:
+
+Example:
+
+https://cf-nested-demo-ujwal.s3.ap-south-1.amazonaws.com/templates/vpc.yaml
+https://cf-nested-demo-ujwal.s3.ap-south-1.amazonaws.com/templates/compute.yaml
+
+
+Replace these URLs inside the parent template.
+
+🥉 PART 3 — Create the Parent Template
+main.yaml (Parent Stack)
+
+🎯 Paste this EXACT template in console:
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Parent stack demonstrating nested stacks
+
+Parameters:
+  EnvName:
+    Type: String
+    Default: dev
+
+Resources:
+
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://YOUR-BUCKET.s3.ap-south-1.amazonaws.com/templates/vpc.yaml
+      Parameters:
+        EnvName: !Ref EnvName
+
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://YOUR-BUCKET.s3.ap-south-1.amazonaws.com/templates/compute.yaml
+      Parameters:
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        PublicSubnet1: !GetAtt NetworkStack.Outputs.PublicSubnet1
+        PublicSubnet2: !GetAtt NetworkStack.Outputs.PublicSubnet2
+        EnvName: !Ref EnvName
+
+
+👉 Replace YOUR-BUCKET and region with your actual bucket name.
+
+🧱 PART 4 — Child Template 1: vpc.yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC Nested Stack
+
+Parameters:
+  EnvName:
+    Type: String
+
+Resources:
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvName}-vpc"
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvName}-subnet1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvName}-subnet2"
+
+Outputs:
+  VpcId:
+    Value: !Ref MyVPC
+  PublicSubnet1:
+    Value: !Ref PublicSubnet1
+  PublicSubnet2:
+    Value: !Ref PublicSubnet2
+
+🖥️ PART 5 — Child Template 2: compute.yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Compute Nested Stack
+
+Parameters:
+  EnvName:
+    Type: String
+  VpcId:
+    Type: String
+  PublicSubnet1:
+    Type: String
+  PublicSubnet2:
+    Type: String
+
+Resources:
+  InstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0e2ff28bfb72a4e45   # Amazon Linux 2023 (Mumbai region)
+      SubnetId: !Ref PublicSubnet1
+
+🧪 PART 6 — Deploy the Parent Stack in AWS Console
+Steps:
+
+Go to CloudFormation Console
+
+Click Create stack → With new resources
+
+Under “Specify template”, choose Upload a template file
+
+Upload main.yaml
+
+Next → Enter a stack name:
+
+nested-demo
+
+
+Keep parameters default (EnvName = dev)
+
+Click Create Stack
+
+🔍 PART 7 — Observe the Nested Stacks
+
+Inside CloudFormation console:
+
+In the Stacks List, you will see:
+
+nested-demo (parent)
+
+nested-demo-NetworkStack-XXXX (child)
+
+nested-demo-ComputeStack-XXXX (child)
+
+Go to Resources tab of parent:
+
+You will see:
+
+NetworkStack (AWS::CloudFormation::Stack)
+
+ComputeStack (AWS::CloudFormation::Stack)
+
+Expand them:
+
+See VPC + subnets from child 1
+
+See EC2 + SG from child 2
+
+🧩 PART 8 — Verify Outputs Are Passed
+
+Go to the NetworkStack → Outputs
+You will see:
+
+VpcId
+PublicSubnet1
+PublicSubnet2
+
+
+Go to parent → Resources → ComputeStack
+And verify these outputs are being used.
+
+🗑️ PART 9 — Clean Up
+
+Delete the parent stack:
+
+CloudFormation will:
+✔️ Delete compute nested stack
+✔️ Delete VPC nested stack
+✔️ Delete all VPC resources
+✔️ Delete EC2 & SG resources
+
+You DO NOT need to delete child stacks manually.

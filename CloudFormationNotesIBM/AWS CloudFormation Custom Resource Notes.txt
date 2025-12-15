@@ -1,0 +1,127 @@
+✅ AWS CloudFormation Custom Resources — Explained
+
+CloudFormation can only create resources that AWS natively supports (EC2, S3, Lambda, IAM, etc.).
+But sometimes you want CloudFormation to:
+
+Create something not supported by CloudFormation
+
+Call an external API
+
+Run custom logic during stack creation/update/deletion
+
+Perform operations that require automation logic
+
+This is where Custom Resources come in.
+
+🎯 What is a Custom Resource?
+
+A Custom Resource is a CloudFormation feature that allows you to run your own code during a stack operation.
+
+This code is usually run using:
+
+Option 1: Lambda-backed Custom Resource (most common)
+
+CloudFormation → triggers → Lambda function
+Lambda performs the custom action → returns success/failure back to CloudFormation.
+
+Option 2: SNS-backed Custom Resource
+
+CloudFormation publishes an SNS message → consumer must handle it and report back.
+
+🧠 How it works (simple flow)
+Stack Creation/Update/Delete
+          ↓
+CloudFormation triggers Custom Resource
+          ↓
+Lambda function runs custom logic
+          ↓
+Lambda returns SUCCES S or FAILED
+          ↓
+Stack continues (or fails)
+
+
+CloudFormation waits for Lambda to respond.
+If Lambda does not reply → stack stays in CREATE_FAILED state.
+
+📌 Use Cases
+Use Case	Why Custom Resource is used?
+Create unsupported resource	Ex: Create CloudFront KeyGroup before CFN supported it
+Invoke external API	Notify another system when stack changes
+Automate setup	Create S3 folder, IAM user password rotation, etc.
+Modify an existing resource	When CFN does not support a specific update feature
+Retrieve external values	Ex: Return an IP from a third-party API as output
+📝 Example: Lambda-backed Custom Resource
+1. CloudFormation Template section
+Resources:
+  MyCustomResource:
+    Type: Custom::MyCustomResource
+    Properties:
+      ServiceToken: !GetAtt MyCustomLambda.Arn
+      BucketName: my-custom-bucket
+
+2. Lambda Code Example (Python)
+import json
+import boto3
+import cfnresponse
+
+def lambda_handler(event, context):
+    try:
+        bucket_name = event['ResourceProperties']['BucketName']
+        
+        s3 = boto3.client('s3')
+        s3.create_bucket(Bucket=bucket_name)
+
+        cfnresponse.send(event, context, cfnresponse.SUCCESS, { 'BucketCreated': bucket_name })
+
+    except Exception as e:
+        cfnresponse.send(event, context, cfnresponse.FAILED, { 'Error': str(e) })
+
+🛑 Important Notes
+1. Must return a response using:
+
+cfnresponse module
+
+OR a signed S3 pre-signed URL
+If you don’t respond → CloudFormation hangs & stack fails.
+
+2. Must handle all three events:
+Create
+Update
+Delete
+
+
+Otherwise resource deletion will also fail.
+
+3. Timeout must be handled
+
+Use a short Lambda timeout (1–3 min) and handle errors properly.
+***************************
+
+Examples:
+
+| Custom Resource Type             | Description / Example Use Case                                            |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| `Custom::GitHubRepo`             | Create a GitHub repository via API                                        |
+| `Custom::SlackChannel`           | Create a Slack channel or post messages                                   |
+| `Custom::JiraProject`            | Create a project in Jira via REST API                                     |
+| `Custom::DNSRecord`              | Create DNS records in external providers (e.g., Cloudflare, GoDaddy)      |
+| `Custom::CloudflareFirewallRule` | Add firewall rules via Cloudflare API                                     |
+| `Custom::S3Folder`               | Create folders inside an S3 bucket (CloudFormation only supports buckets) |
+| `Custom::SendNotification`       | Call an external notification system (Slack, Teams, email API)            |
+| `Custom::EC2TagUpdater`          | Update tags on EC2 instances dynamically using Lambda                     |
+| `Custom::SecretsManagerSecret`   | Generate or rotate secrets in non-standard ways                           |
+| `Custom::ExternalServiceSetup`   | Any external SaaS resource provisioning                                   |
+
+Custom::StripeCustomer → Create a customer in Stripe API
+
+Custom::ZendeskTicket → Automatically open a ticket in Zendesk
+
+Custom::TwilioSMS → Send SMS via Twilio
+
+Custom::DockerImagePush → Push a Docker image to a registry
+
+Custom::VPNUser → Provision a VPN account in a corporate system
+
+Custom::MonitoringAlert → Configure alerts in a third-party monitoring tool
+
+Custom::K8sNamespace → Create a Kubernetes namespace via API

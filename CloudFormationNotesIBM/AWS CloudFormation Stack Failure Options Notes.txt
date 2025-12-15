@@ -1,0 +1,73 @@
+AWS CloudFormation: Stack Failure Options
+
+When a stack creation or update fails, you can control what happens using “Rollback on failure” behavior. There are two main options:
+
+1️⃣ Roll back all stack resources (Default)
+
+Behavior:
+If stack creation/update fails, all resources created so far are deleted.
+Stack is rolled back to no resources.
+
+Use case:
+Safe for testing, temporary stacks, or demo environments.
+Ensures no partial resources are left behind.
+
+Example:
+You create a stack with EC2 + RDS
+EC2 succeeds, RDS fails
+Both EC2 and RDS are deleted
+Stack creation fails → stack removed
+
+2️⃣ Preserve successfully provisioned resources
+
+Behavior:
+If stack creation/update fails, successfully created resources are preserved.
+Failed resources are rolled back.
+Resources without a previous “stable state” are deleted in next operation.
+
+Use case:
+Useful in production when you don’t want to lose expensive resources (e.g., RDS instance, EBS volume)
+Allows you to inspect and debug partial resources
+
+Example:
+Stack with EC2 + RDS
+EC2 succeeds, RDS fails
+EC2 is kept running, RDS is rolled back
+
+You can fix the template and retry
+************************************
+
+AWS CloudFormation: Delete Newly Created Resources During Rollback
+When a stack creation or update fails, you can control what happens to newly created resources with this option. It affects how DeletionPolicy is applied during rollback.
+
+There are two main options:
+
+1️⃣ Use deletion policy (Default)
+
+Behavior:
+CloudFormation respects the DeletionPolicy of each resource.
+
+Example:
+Resource with DeletionPolicy: Retain → kept even if rollback occurs
+Resource with DeletionPolicy: Snapshot → snapshot created
+Resource with no DeletionPolicy → deleted
+
+Use case:
+
+You want to protect important resources (like RDS databases, S3 buckets) from being deleted accidentally during rollback.
+
+2️⃣ Delete all newly created resources
+
+Behavior:
+CloudFormation deletes all resources created during the failed stack operation, ignoring any DeletionPolicy.
+Ensures no partial resources remain, even if marked Retain or Snapshot.
+
+Use case:
+Useful in testing/demo environments, where you want a clean slate
+Avoids leftover resources if rollback happens
+
+Example Scenarios
+Resource					DeletionPolicy				Rollback Option: Use deletion policy	Rollback Option: Delete all newly created resources
+RDS DB					Snapshot					Snapshot created during rollback		DB deleted, snapshot NOT created
+EC2						None					EC2 instance deleted				EC2 instance deleted
+S3 Bucket					Retain					Bucket retained					Bucket deleted

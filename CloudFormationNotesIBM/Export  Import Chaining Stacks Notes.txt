@@ -1,0 +1,120 @@
+✅ Export / Import: Chaining Stacks Together
+
+CloudFormation allows one stack to share values with another stack using:
+
+Outputs: with Export: → Producer stack
+
+!ImportValue → Consumer stack
+
+This allows you to reuse resources across stacks without duplicating them.
+
+🎯 Why use Export/Import?
+
+✔️ Share VPC ID and Subnet IDs between networking and application stacks
+✔️ Share Security Group ID
+✔️ Share DB endpoint
+✔️ Promote modular design (Network stack, App stack, Monitoring stack)
+✔️ Avoid template size limits
+✔️ Allow teams to work independently
+
+This is very common in enterprise setups.
+
+🧩 How Export/Import works
+Stack A exports a value
+Stack B imports the value
+
+CloudFormation ensures:
+
+Export names are unique per region per account
+
+Imported values cannot be deleted unless the importers are deleted first
+
+📘 Example 1: Stack A (Producer) – Export a VPC ID
+stack-vpc.yaml
+AWSTemplateFormatVersion: 2010-09-09
+Description: VPC Stack that exports VPC ID
+
+Resources:
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: DemoVPC
+
+Outputs:
+  ExportedVPCID:
+    Description: VPC ID
+    Value: !Ref MyVPC
+    Export:
+      Name: Demo-VPC-ID   # <-- Export name
+
+
+Deploy this first:
+
+aws cloudformation deploy --template-file stack-vpc.yaml --stack-name VPCStack
+
+📗 Example 2: Stack B (Consumer) – Import the VPC ID
+stack-app.yaml
+AWSTemplateFormatVersion: 2010-09-09
+Description: Application Stack that imports VPC ID
+
+Resources:
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for app
+      VpcId: !ImportValue Demo-VPC-ID   # <-- Import from Stack A
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+
+Deploy this next:
+
+aws cloudformation deploy --template-file stack-app.yaml --stack-name AppStack
+
+🔗 Architecture Diagram (Explain to Consultants)
++---------------------+               +----------------------+
+|     Stack A         |               |      Stack B         |
+|  (Network Stack)    |               |   (Application)      |
+|---------------------|               |----------------------|
+|  Creates VPC        |               |  Needs VPC ID        |
+|  Outputs VPC ID --> |----Export---->|  Imports VPC ID      |
++---------------------+               +----------------------+
+*****************
+
+CloudFormation has strict deletion rules:
+
+You MUST delete the importing stack first
+
+Only then delete the exporting stack
+
+So the order is:
+
+1️⃣ Delete AppStack (imports value)
+2️⃣ Delete VPCStack (exports value)
+
+✅ Delete App (Consumer) Stack
+aws cloudformation delete-stack --stack-name AppStack
+
+
+To wait until deletion completes:
+
+aws cloudformation wait stack-delete-complete --stack-name AppStack
+
+✅ Delete VPC (Producer) Stack
+aws cloudformation delete-stack --stack-name VPCStack
+
+
+To wait until it completes:
+
+aws cloudformation wait stack-delete-complete --stack-name VPCStack
+
+🔍 Verify deletion
+aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE

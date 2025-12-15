@@ -1,0 +1,247 @@
+1️⃣ What are StackSets?
+
+StackSets = CloudFormation + Multi-Account + Multi-Region deployment.
+
+In simple words:
+
+StackSets let you deploy the same CloudFormation stack to multiple AWS accounts and regions from a single place.
+
+You write one template, choose:
+
+Which AWS Accounts (or AWS Organizations OUs)
+
+Which Regions
+
+…and AWS automatically creates stacks everywhere.
+
+2️⃣ Why Consultants Use StackSets? (Real Project Examples)
+✔️ Scenario 1 — Security Baseline for All Accounts
+
+A company with 200 AWS accounts wants:
+
+IAM roles
+
+CloudTrail
+
+Config rules
+Same in every account.
+
+StackSets → Deploy once → Goes to all 200 accounts.
+
+✔️ Scenario 2 — Standard Networking Across Regions
+
+Deploy:
+
+VPC
+
+Subnets
+
+Route tables
+Across 5 regions automatically.
+
+✔️ Scenario 3 — Guardrails for Enterprise Landing Zone (LZ)
+
+When new accounts are created inside AWS Organizations:
+
+StackSets automatically deploy baseline IAM roles
+
+S3 logging buckets
+
+CloudWatch alarms
+
+Auto-deployment to new accounts → Zero manual work.
+
+3️⃣ StackSets Deployment Models (IMPORTANT for Training)
+
+There are 2 modes:
+
+A. SELF-MANAGED MODE
+
+You manually configure:
+
+Admin account
+
+Execution accounts (target accounts)
+
+You must set trust relationships manually.
+
+Useful for:
+
+No AWS Organizations setup
+
+Training, demo, small companies
+
+B. SERVICE-MANAGED MODE (AWS Organizations)
+
+Automatically uses:
+
+AWS Organizations
+
+Deploys to Organizational Units (OUs)
+
+Benefits:
+
+No manual IAM role creation
+
+Auto-deploy to new accounts in the OU
+
+Most common in enterprises
+
+This is the model used in Landing Zone, Control Tower, and large enterprises.
+
+4️⃣ StackSet Component Overview
+StackSet → Stack Instances → Stacks
+
+StackSet
+The master configuration + template.
+
+Stack Instances
+Mapping of:
+
+Account IDs
+
+Regions
+
+Stacks
+Actual deployed stacks in each target account & region.
+
+5️⃣ Sample Template for StackSet Demo
+
+Here is a small CloudFormation template you can use:
+
+👉 Creates an S3 bucket (simple, safe for multi-account deployments)
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Sample StackSet Template - S3 Bucket
+
+Resources:
+  DemoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "stackset-demo-bucket-${AWS::AccountId}-${AWS::Region}"
+
+6️⃣ 🔥 Hands-On Lab: StackSets (Service-Managed) — Step-by-Step
+
+LAB: Deploy a StackSet Across Multiple Accounts and Regions
+Prerequisites:
+
+✔ AWS Organizations enabled
+✔ You are logged in as the management/administrator account
+
+STEP 1 — Prepare the CloudFormation Template
+
+Create a file: stackset-s3.yaml
+Paste the template above.
+
+STEP 2 — Open CloudFormation StackSets
+
+Go to:
+
+AWS Console → CloudFormation → StackSets
+
+Click Create StackSet.
+
+STEP 3 — Choose “Upload a Template File”
+
+Upload your stackset-s3.yaml.
+
+Click Next.
+
+STEP 4 — Choose Deployment Model
+
+Select:
+
+✔ Service-managed permissions (recommended)
+
+CloudFormation uses AWS Organizations automatically.
+
+STEP 5 — Select Deployment Targets
+
+Choose:
+
+1) Specify OUs (Organizational Units)
+
+Select an OU (ex: "Sandbox", "Dev", or "All Accounts").
+
+OR
+2) Specify individual AWS account IDs
+STEP 6 — Select Deployment Regions
+
+Choose multiple regions, e.g.:
+
+ap-south-1
+
+us-east-1
+
+eu-west-1
+
+STEP 7 — Set Deployment Options
+
+Important fields:
+
+Region concurrency
+
+Parallel (faster)
+
+Sequential (safer)
+
+Failure tolerance
+
+How many accounts/regions can fail before deployment stops.
+
+STEP 8 — Execute the StackSet
+
+Click Submit.
+
+CloudFormation will:
+
+Create Stack Instances
+
+Deploy Stacks into each account + region
+
+This may take a few minutes.
+
+STEP 9 — Verify Deployment
+
+On StackSet → Click the StackSet name → Stack Instances tab.
+
+You will see:
+
+Account	Region	Status
+123456789012	ap-south-1	CREATE_COMPLETE
+123456789012	us-east-1	CREATE_COMPLETE
+234567890123	ap-south-1	CREATE_COMPLETE
+
+STEP 10 — Validate in Target Accounts
+
+Login to a target account.
+
+Go to S3 Console → You should see buckets like:
+
+stackset-demo-bucket-123456789012-ap-south-1
+
+7️⃣ What Happens When You Update the StackSet?
+
+Update the template → StackSets will:
+
+Push the change to all target accounts/regions
+
+Automatically update the child stacks
+
+Respect the same concurrency & failure tolerance rules
+
+8️⃣ What Happens When You Add a New Account to the OU?
+
+In Service-managed mode:
+
+➡️ StackSets automatically deploy to the new account
+➡️ No human action needed
+
+This is extremely important for enterprise onboarding workflows.
+
+9️⃣ StackSets Deletion Behavior
+
+When you delete a StackSet:
+
+Child stacks are deleted automatically
+
+You can retain stacks if you choose

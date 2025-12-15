@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Parent stack demonstrating nested stacks
+
+Parameters:
+  EnvName:
+    Type: String
+    Default: dev
+
+Resources:
+
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://cf-nested-demo-ujwal.s3.us-east-1.amazonaws.com/vpc.yaml
+      Parameters:
+        EnvName: !Ref EnvName
+
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://cf-nested-demo-ujwal.s3.us-east-1.amazonaws.com/compute.yaml
+      Parameters:
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        PublicSubnet1: !GetAtt NetworkStack.Outputs.PublicSubnet1
+        PublicSubnet2: !GetAtt NetworkStack.Outputs.PublicSubnet2
+        EnvName: !Ref EnvName

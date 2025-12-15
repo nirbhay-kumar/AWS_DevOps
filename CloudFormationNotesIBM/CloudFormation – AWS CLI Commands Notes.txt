@@ -1,0 +1,78 @@
+CloudFormation – AWS CLI Commands
+✅ 1. Create a Stack
+aws cloudformation create-stack \
+  --stack-name MyStack \
+  --template-body file://template.yaml \
+  --parameters ParameterKey=Env,ParameterValue=Prod \
+  --capabilities CAPABILITY_NAMED_IAM
+
+✅ 2. Update a Stack
+aws cloudformation update-stack \
+  --stack-name MyStack \
+  --template-body file://template.yaml \
+  --parameters ParameterKey=Env,ParameterValue=Prod \
+  --capabilities CAPABILITY_NAMED_IAM
+
+❗ 3. Deploy (recommended for CI/CD – automatically creates/updates)
+aws cloudformation deploy \
+  --stack-name MyStack \
+  --template-file template.yaml \
+  --parameter-overrides Env=Prod \
+  --capabilities CAPABILITY_NAMED_IAM
+
+❌ 4. Delete a Stack
+aws cloudformation delete-stack \
+  --stack-name MyStack
+
+📄 5. Describe a Stack
+aws cloudformation describe-stacks \
+  --stack-name MyStack
+
+🧾 6. List Stacks
+aws cloudformation list-stacks
+
+📜 7. List Stack Resources
+aws cloudformation list-stack-resources \
+  --stack-name MyStack
+
+🔍 8. Describe Stack Events
+aws cloudformation describe-stack-events \
+  --stack-name MyStack
+
+🛠️ 9. Validate a Template
+Using a local file:
+aws cloudformation validate-template \
+  --template-body file://rds-protected.yaml
+
+Using S3:
+aws cloudformation validate-template \
+  --template-url https://s3.amazonaws.com/bucket/template.yaml
+
+📦 10. Package a Template (for Lambda, S3 uploads)
+aws cloudformation package \
+  --template-file template.yaml \
+  --s3-bucket my-bucket \
+  --output-template-file packaged.yaml
+
+📦➡️☁️ 11. Package + Deploy (Common in CI/CD)
+aws cloudformation package \
+  --template-file template.yaml \
+  --s3-bucket my-bucket \
+  --output-template-file packaged.yaml
+
+aws cloudformation deploy \
+  --template-file packaged.yaml \
+  --stack-name MyStack \
+  --capabilities CAPABILITY_NAMED_IAM
+
+🔄 12. Continue Rollback
+aws cloudformation continue-update-rollback \
+  --stack-name MyStack
+
+🔐 13. Get Template (download existing template from a deployed stack)
+aws cloudformation get-template \
+  --stack-name MyStack \
+  --query "TemplateBody" \
+  --output text > downloaded-template.yaml
+
+

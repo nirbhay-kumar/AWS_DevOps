@@ -1,0 +1,102 @@
+🚀 AWS CDK 
+
+AWS CDK = “Infrastructure as Code using real programming languages.”
+
+You can write AWS resources in TypeScript, Python, Java, C#, Go, etc.
+
+A. Install Node.js (latest LTS)
+
+AWS CDK CLI requires Node.
+
+Check:
+
+node -v
+
+B. Install AWS CDK CLI
+npm install -g aws-cdk
+
+
+Check version:
+
+cdk --version
+
+C. Configure AWS CLI
+
+Make sure your AWS credentials are configured:
+
+aws configure
+
+✅ 2. Initialize Your First CDK Project
+
+Choose a language. Most common is TypeScript.
+
+Create a project folder:
+mkdir my-first-cdk-app
+cd my-first-cdk-app
+
+Initialize CDK project
+cdk init app --language typescript
+
+
+This creates:
+
+bin/          # entry point
+lib/          # where you write stacks
+cdk.json
+package.json
+
+✅ 3. Understand the Folder Structure
+bin/my-first-cdk-app.ts
+
+Bootstraps your app.
+
+lib/my-first-cdk-app-stack.ts
+
+You define AWS resources here.
+
+Example stack:
+
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+
+export class MyFirstCdkAppStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+
+    new s3.Bucket(this, 'MyBucket', {
+      versioned: true
+    });
+  }
+}
+
+✅ 4. Bootstrap Your AWS Environment
+
+This prepares your account/region for CDK deployments:
+
+cdk bootstrap aws://ACCOUNT_ID/REGION
+
+
+Example:
+
+cdk bootstrap aws://123456789012/us-east-1
+
+✅ 5. Deploy Your CDK Stack
+Check what CDK will create
+cdk synth
+
+Deploy
+cdk deploy
+
+
+This is same as CloudFormation deploying a stack.
+
+✅ 6. Modify & Redeploy
+
+Change any resource in the lib folder, then:
+
+cdk diff
+cdk deploy
+
+📌 7. Destroy When Done
+cdk destroy

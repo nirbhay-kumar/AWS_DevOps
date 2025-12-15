@@ -1,0 +1,60 @@
+Step Prerequisite : Setup a code repo on GitHub with local repo 
+
+Go to GitHub account and create a repository ex.cicd
+Create PAT in GitHub account  ex. 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
+(Go to settings ---> Developer settings ---> Generate Token( classic ))
+Go to local machine and create a folder named cicd
+Go inside folder and open GitBash
+enter git init command
+enter git remote add origin "githuburl"
+enter git credentials 
+user name : your git account username
+pwd: PAT
+
+Copy all source code into local folder
+Perform following commands in Gitbash
+git status
+git add .
+git status
+git commit -m "first commit"
+git push -u origin master
+
+This will setup your GitHub
+Now create build project using following steps
+
+Step 1:
+go to code build service
+create project rajCodeBuildwithGitHub
+select source provider as GitHub
+You will see error in red color that GitHub is not connected
+select the checkbox of Use override credentials for this project only
+Click on small link =>create a new personal access token connection.
+New windows will appear 
+Write some secret name ex. RajPAT
+and Enter GitHub personal access token and click on create  ex. ghp_GD8cyPXygwPjLxT274dqWPdssff471pQIHk
+click on Manage account credentials. and choose git connection under Personal Access Token and save
+(you will see message : Your account is successfully connected through Secrets Manager secret)
+select Git hub repository ex. rajproject / enter the complete GitHub url of repository
+under source version type as GitHub Branch name
+
+Use following step with * only if you want to send artifact to s3 bucket- in case you build the file
+*under Buildspec- choose Use a Buildspec file option
+*under Artifacts option -> select artifacts option as Amazon s3
+*select the Bucket name you created initially for output artifact purpose
+*Under Namespace type- choose Build id
+*Under Artifact packaging -choose Zip
+
+Create project
+
+Go to IAM service and open CodeBuild role---> add s3fullaccesspermissions
+Now on CodeBuild Project page click on Start build
+Observer the status and Build logs
+Finally It succeeds
+Observe Phase details
+Finally check s3 bucket to see artifacts uploaded by build process
+
+Step 2: 
+Go to local repo, open index.html and Change the word congratulations in to something different and commit changes. 
+Again start build on code build project.
+You will observe build fail because of test command resulted in failure.
+Got to local repo and recorrect the changes in index.html and repeat all process. This time build will succeed.

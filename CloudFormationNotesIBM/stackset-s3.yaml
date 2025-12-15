@@ -1,0 +1,8 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Sample StackSet Template - S3 Bucket
+
+Resources:
+  DemoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "stackset-demo-bucket-${AWS::AccountId}-${AWS::Region}"

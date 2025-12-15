@@ -1,0 +1,52 @@
+AWS wants to prevent accidental creation of privileged IAM resources (like roles, users, and policies).
+So when your CloudFormation template contains IAM resources, CloudFormation needs your explicit approval.
+
+🧰 When to Use CAPABILITY_NAMED_IAM
+
+Use --capabilities CAPABILITY_NAMED_IAM when your template contains IAM resources where you specify the name explicitly, e.g.:
+
+❌ Example (requires CAPABILITY_NAMED_IAM)
+Resources:
+  MyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: MyCustomRoleName   # <-- CUSTOM NAME
+      AssumeRolePolicyDocument: ...
+
+
+Here you control the IAM Role name → must use CAPABILITY_NAMED_IAM.
+
+🧰 When to Use CAPABILITY_IAM
+
+Use CAPABILITY_IAM when your template creates IAM resources but DOES NOT define custom names.
+
+✔ Example (only needs CAPABILITY_IAM)
+Resources:
+  MyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: ...
+      # No RoleName → CloudFormation assigns name automatically
+
+🧨 When to Use CAPABILITY_AUTO_EXPAND
+
+Required for nested stacks and Macros.
+
+🧾 CLI Example
+Create stack
+aws cloudformation create-stack \
+  --stack-name test \
+  --template-body file://template.yaml \
+  --capabilities CAPABILITY_NAMED_IAM
+
+Update stack
+aws cloudformation update-stack \
+  --stack-name test \
+  --template-body file://template.yaml \
+  --capabilities CAPABILITY_NAMED_IAM
+
+📌 Summary
+Capability		When Needed
+CAPABILITY_IAM		Stack creates IAM resources without custom names
+CAPABILITY_NAMED_IAM	Stack creates IAM resources with custom names
+CAPABILITY_AUTO_EXPAND	Nested stacks or macros expand your template

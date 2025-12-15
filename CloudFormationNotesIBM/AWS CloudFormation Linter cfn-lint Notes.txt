@@ -1,0 +1,94 @@
+AWS CloudFormation Linter (cfn-lint)
+
+cfn-lint is a command-line tool that validates your CloudFormation templates before deployment.
+
+It checks for:
+
+Syntax errors
+
+Resource property errors (invalid values, missing required fields)
+
+Best practice violations (e.g., naming conventions, deprecated properties)
+
+Cross-parameter and cross-resource validation
+
+It works for YAML and JSON CloudFormation templates.
+
+Key Features
+Feature	Description
+Syntax validation	Checks template YAML/JSON syntax
+Resource validation	Verifies resource types and required properties
+Property validation	Ensures valid values for each AWS resource property
+Parameter checks	Validates default values, allowed values, and patterns
+Detects deprecated resources/properties	Warns if you use old or unsupported AWS resources
+Integration	Can be used with CI/CD pipelines (CodeBuild, GitHub Actions, Jenkins)
+Install cfn-lint
+
+You can install it via pip:
+
+pip install --user cfn-lint
+
+
+If pip is not available, you’ll need a local Python installation first (like we discussed for TaskCat).
+
+Check installation:
+
+cfn-lint --version
+
+Basic Usage
+# Lint a template file
+cfn-lint template.yaml
+
+# Lint a template with a specific AWS region (for resource validation)
+cfn-lint template.yaml --region us-east-1
+
+Example Output
+
+If your template has an error:
+
+E3001 Invalid property 'BucketNam' for resource 'MyBucket' of type 'AWS::S3::Bucket'
+E3010 Missing required property 'BucketName' for resource 'MyBucket'
+
+
+E3001 → Invalid property
+
+E3010 → Missing required property
+
+Advanced Usage
+
+Check multiple templates recursively:
+
+cfn-lint templates/
+
+
+Integrate with CI/CD pipelines:
+
+Use cfn-lint as part of a pre-deploy step in CodeBuild, GitHub Actions, Jenkins
+
+Fail the build if template has errors
+
+Enable rules or suppress warnings:
+
+cfn-lint allows config files to customize rules and severity
+
+Example Workflow with TaskCat
+
+Lint the template first:
+
+cfn-lint template.yaml
+
+
+Run TaskCat to deploy in multiple regions:
+
+taskcat test run
+
+
+This ensures you catch syntax errors early before spending time deploying stacks.
+
+✅ Summary
+
+cfn-lint = Static analysis / linting
+
+TaskCat = Dynamic testing / deployment validation
+
+Use both together for robust CloudFormation template validation

@@ -1,0 +1,94 @@
+AWS TaskCat Overview
+
+TaskCat stands for Test Automation for CloudFormation Templates.
+
+It is an open-source Python-based tool developed by the AWS Quick Start team.
+
+Purpose
+
+Automatically deploys your CloudFormation templates across multiple AWS regions
+
+Validates templates for errors and misconfigurations
+
+Helps ensure infrastructure works as expected before production deployment
+
+Supports multi-region testing, including nested stacks
+
+Key Features
+Feature	Description
+Multi-region testing	Deploy a single template in multiple regions automatically
+Multi-instance testing	Deploy multiple instances of a template with different parameter sets
+Automated reporting	Generates test results including success/failure of each stack
+Integration	Can be integrated with CI/CD pipelines (GitHub Actions, CodePipeline, Jenkins)
+Nested stack support	Supports testing of templates that include nested stacks
+Open-source	You can customize it for your own testing scenarios
+How TaskCat Works
+
+Define a test configuration in a taskcat.yml file
+
+Specify the template you want to test and the regions/parameters
+
+Run TaskCat → it deploys the stacks in AWS
+
+Monitor deployments → success/failure is reported
+
+Destroy stacks automatically after testing (optional)
+
+Example taskcat.yml
+project:
+  name: my-cfn-demo
+  regions:
+    - us-east-1
+
+tests:
+  mytest:
+    template: template.yaml
+    parameters:
+      BucketName: taskcat-demo-bucket
+      Environment: test
+
+
+project.name → Name of the test project
+
+regions → AWS regions to test
+
+tests → One or more tests with parameters
+
+template → Path to CloudFormation template
+
+template.yaml
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name of the S3 bucket to create
+
+Resources:
+  DemoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+
+
+Running TaskCat
+
+Install via pip:
+
+pip install taskcat
+
+
+Initialize project:
+
+taskcat init
+
+
+Run the tests:
+
+taskcat test run -n
+
+
+Check results:
+
+./taskcat_outputs/index.html
+chmod -R 755 taskcat_outputs
+ls -l taskcat_outputs

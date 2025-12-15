@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create multiple EC2 instances, S3 buckets, and IAM users using Fn::ForEach loop.
+
+Transform:
+  - AWS::LanguageExtensions
+
+Parameters:
+  InstanceAMI:
+    Type: String
+    Default: ami-0c02fb55956c7d316
+    Description: AMI for EC2 instances
+
+Resources:
+
+  ##################################################################
+  # 1️⃣ Multiple EC2 Instances (5)
+  ##################################################################
+  EC2Instances:
+    Fn::ForEach:
+      - identifier: idx
+      - collection: [0, 1, 2, 3, 4]
+      - template:
+          Type: AWS::EC2::Instance
+          Properties:
+            ImageId: !Ref InstanceAMI
+            InstanceType: t2.micro
+            Tags:
+              - Key: Name
+                Value: !Sub "EC2-${idx}"
+
+  ##################################################################
+  # 2️⃣ Multiple S3 Buckets (3)
+  ##################################################################
+  S3Buckets:
+    Fn::ForEach:
+      - identifier: b
+      - collection: [0, 1, 2]
+      - template:
+          Type: AWS::S3::Bucket
+          Properties:
+            BucketName: !Sub "loop-demo-bucket-${b}-${AWS::AccountId}"
+
+  ##################################################################
+  # 3️⃣ Multiple IAM Users (2)
+  ##################################################################
+  IAMUsers:
+    Fn::ForEach:
+      - identifier: u
+      - collection: [0, 1]
+      - template:
+          Type: AWS::IAM::User
+          Properties:
+            UserName: !Sub "LoopUser-${u}"
+            Tags:
+              - Key: Purpose
+                Value: DemoUser

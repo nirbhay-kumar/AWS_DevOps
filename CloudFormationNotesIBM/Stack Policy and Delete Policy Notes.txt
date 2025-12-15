@@ -1,0 +1,228 @@
+This is a full lab with:
+
+✅ Step-by-step instructions
+✅ A complete stack policy JSON
+✅ A complete CloudFormation template with an RDS instance
+✅ Commands to apply and test the stack policy
+✅ A demo to show how updates/deletes are blocked until the policy is changed
+
+Perfect for demonstrating CloudFormation’s resource protection features in class.
+
+🧪 LAB: Protect RDS Using Stack Policy + DeletionPolicy
+LAB OBJECTIVE
+
+we will:
+
+Deploy an RDS MySQL instance using CloudFormation
+
+Protect the RDS resource so it cannot be updated accidentally
+
+Apply a Stack Policy
+
+Attempt an update → witness it fail
+
+Temporarily override the policy to allow updates
+
+Delete the stack → verify that snapshot is created due to DeletionPolicy: Snapshot
+
+🧩 STEP 1 — RDS CloudFormation Template
+
+Save this as rds-protected.yaml
+
+AWSTemplateFormatVersion: 2010-09-09
+Description: Demo RDS with DeletionPolicy and StackPolicy Protection
+
+Parameters:
+  DBName:
+    Type: String
+    Default: MyDemoDB
+
+  DBUser:
+    Type: String
+    Default: admin
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+
+Resources:
+  MyDB:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      DBName: !Ref DBName
+      MasterUsername: !Ref DBUser
+      MasterUserPassword: !Ref DBPassword
+      AllocatedStorage: "20"
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      EngineVersion: "8.0"
+      PubliclyAccessible: true
+
+Outputs:
+  DBEndpoint:
+    Value: !GetAtt MyDB.Endpoint.Address
+
+🧩 STEP 2 — Stack Policy JSON
+
+Save this as stack-policy.json
+
+This policy DENIES all update actions on the RDS DBInstance.
+
+{
+  "Statement": [
+    {
+      "Effect": "Deny",
+      "Action": "Update:Delete",
+      "Principal": "*",
+      "Resource": "LogicalResourceId/MyDB"
+    },
+    {
+      "Effect": "Deny",
+      "Action": "Update:Replace",
+      "Principal": "*",
+      "Resource": "LogicalResourceId/MyDB"
+    }
+  ]
+}
+
+🧩 STEP 3 — Deploy the RDS stack with the stack policy
+aws cloudformation create-stack \
+  --stack-name ProtectRDS \
+  --template-body file://rds-protected.yaml \
+  --parameters ParameterKey=DBPassword,ParameterValue=MySecurePass123 \
+  --capabilities CAPABILITY_IAM \
+  --stack-policy-body file://stack-policy.json
+
+aws cloudformation wait stack-update-complete --stack-name ProtectRDS
+
+aws cloudformation describe-stacks --stack-name ProtectRDS --query "Stacks[0].StackStatus" --output text
+
+
+🧩 STEP 4 — TEST the protection
+
+Modify the template, change storage from 20 → 25 GB:
+
+AllocatedStorage: "25"
+
+
+Now run:
+
+aws cloudformation update-stack \
+  --stack-name ProtectRDS \
+  --template-body file://rds-protected.yaml \
+  --parameters ParameterKey=DBPassword,ParameterValue=MySecurePass123 \
+  --capabilities CAPABILITY_IAM
+
+
+
+🔥 EXPECTED RESULT:
+Update FAILS with message:
+
+Action denied by stack policy
+
+
+This demonstrates protection!
+
+🧩 STEP 5 — Override the stack policy (temporary unlock)
+
+You can override the policy for this operation only:
+
+aws cloudformation update-stack \
+  --stack-name ProtectRDS \
+  --template-body file://rds-protected.yaml \
+  --parameters ParameterKey=DBPassword,ParameterValue=MySecurePass123 \
+  --stack-policy-during-update-body file://allow-update.json
+
+
+Where allow-update.json is:
+
+{
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "Update:*",
+      "Principal": "*",
+      "Resource": "LogicalResourceId/MyDB"
+    }
+  ]
+}
+
+
+This temporarily lifts the protection for update ONLY.
+
+🧩 STEP 6 — Test deletion protection
+
+Try deleting the stack:
+
+aws cloudformation delete-stack --stack-name ProtectRDS
+
+aws cloudformation wait stack-delete-complete --stack-name ProtectRDS
+
+aws cloudformation describe-stacks --stack-name ProtectRDS --query "Stacks[0].StackStatus" --output text
+
+
+🔥 EXPECTED:
+CloudFormation deletes everything except RDS and leaves behind a snapshot because:
+
+DeletionPolicy: Snapshot
+
+***************************************
+
+
+In AWS CloudFormation, the DeletionPolicy attribute tells CloudFormation what to do with a resource when the stack is deleted. There are three main options:
+
+1️⃣ Delete (Default)
+DeletionPolicy: Delete
+
+
+Default behavior if you don’t specify anything.
+
+CloudFormation deletes the resource when the stack is deleted.
+
+Suitable for ephemeral resources like EC2 instances or temporary S3 buckets.
+
+2️⃣ Retain
+DeletionPolicy: Retain
+
+
+CloudFormation does not delete the resource.
+
+Resource remains in your account even after the stack is deleted.
+
+Use for critical or production resources that must persist independently of the stack.
+
+Example: RDS database you want to keep, S3 bucket with production data.
+
+3️⃣ Snapshot
+DeletionPolicy: Snapshot
+
+
+Only supported for AWS::RDS::DBInstance and AWS::Redshift::Cluster.
+
+CloudFormation creates a snapshot before deleting the resource.
+
+Useful for backing up data before deletion.
+
+Example:
+
+MyDB:
+  Type: AWS::RDS::DBInstance
+  DeletionPolicy: Snapshot
+  Properties:
+    DBName: !Ref DBName
+    DBInstanceClass: db.t2.micro
+    Engine: MySQL
+
+
+When the stack is deleted, a snapshot is automatically created.
+
+Important Notes
+
+DeletionPolicy is per resource, not per stack.
+
+Can be combined with stack policies for more granular protection.
+
+Snapshot only works for resources that support snapshots (RDS, Redshift).
+
+Retain is handy for production data or critical storage buckets.
