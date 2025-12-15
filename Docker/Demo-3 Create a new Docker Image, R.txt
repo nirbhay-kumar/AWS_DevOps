@@ -1,0 +1,47 @@
+Demo-3: Create a new Docker Image, Run as Container and Push to AWS ECR and Pull it from ECR and Run container locally
+
+Pre requisite : 
+1. You must create one repository in ECR
+2. Create IAM user having Admin Access and create Access Key and Secret Key of that user
+
+Step-1
+configure AWS on CLI using following command
+
+aws configure 
+
+
+Retrieve an authentication token and authenticate your Docker client to your registry. Use the AWS CLI:
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 600330284614.dkr.ecr.us-east-1.amazonaws.com
+
+Step-2: Create Dockerfile and copy our customized index.html
+Dockerfile content:
+
+FROM nginx
+COPY index.html /usr/share/nginx/html
+
+Create sample index.html
+
+Step-3
+Build your Docker image using the following command. For information on building a Docker file from scratch see the instructions here . You can skip this step if your image is already built:
+
+docker build -t demo .
+
+Step-4
+After the build completes, tag your image so you can push the image to this repository:
+docker tag demo:latest 600330284614.dkr.ecr.us-east-1.amazonaws.com/demo:latest
+
+Step-5
+Run the following command to push this image to your newly created AWS repository:
+docker push 600330284614.dkr.ecr.us-east-1.amazonaws.com/demo:latest
+
+Step-6
+Run the following command to pull this image from your newly created AWS repository to local:
+docker pull 600330284614.dkr.ecr.us-east-1.amazonaws.com/demo:latest
+
+Step-7
+Run the following command to run the container locally:
+docker run --name app1 -p 80:80 -d 600330284614.dkr.ecr.us-east-1.amazonaws.com/demo:latest
+
+Step 8:
+aws ecr describe-repositories
+aws ecr describe-images --repository-name demorepo

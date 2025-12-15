@@ -1,0 +1,46 @@
+Demo-2: Create a new Docker Image, Run as Container to test and Push image to Docker Hub
+
+Pre-requisite Step
+Create your Docker hub account.
+https://hub.docker.com/
+
+Important Note: In the below listed commands wherever you see rajendrawagh you can replace with your docker hub account id.
+
+
+Step-1: Create Dockerfile and create index.html
+cd /Users/Rajen/Documents
+mkdir my-docker
+
+You require two files Dockerfile and index.html
+
+1. Create docker file using
+vi Dockerfile
+
+Enter following in Dockerfile
+
+FROM nginx
+COPY index.html /usr/share/nginx/html
+
+2. Create sample index.html using following command
+vi index.html
+
+Write any sentence in index.html and save it
+
+Step-2: Build Docker Image & run it
+
+docker build -t demo2image .
+
+docker run --name app2 -p 80:80 -d demo2image
+
+Step-4: Tag & push the Docker image to docker hub
+
+docker images
+
+docker tag demo2image rajendrawagh/mynginx_custom:v4-release
+
+docker push rajendrawagh/mynginx_custom:v4-release
+
+
+Step-5: Verify the same on docker hub
+Login to docker hub and verify the image we have pushed
+Url: https://hub.docker.com/repositories
